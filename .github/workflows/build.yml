@@ -1,0 +1,61 @@
+name: build-mac
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Configure (universal: Apple Silicon + Intel)"
+        run: cmake -B build -G Xcode -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DSD_BUILD_HOST_TEST=ON
+
+      - name: Build
+        run: cmake --build build --config Release --target SpectralDelay_VST3 SpectralDelay_AU core_test host_test -- -quiet
+
+      - name: DSP core test
+        run: |
+          TEST=$(find build -name core_test -type f -perm -u+x | head -1)
+          "$TEST"
+
+      - name: Sign (ad-hoc)
+        run: |
+          cd build/SpectralDelay_artefacts/Release
+          codesign --force --deep --sign - "VST3/Spectral Delay.vst3"
+          codesign --force --deep --sign - "AU/Spectral Delay.component"
+          codesign --verify --deep --verbose=2 "VST3/Spectral Delay.vst3"
+          codesign --verify --deep --verbose=2 "AU/Spectral Delay.component"
+          lipo -info "VST3/Spectral Delay.vst3/Contents/MacOS/Spectral Delay"
+
+      - name: Host test (load VST3 like a DAW)
+        run: |
+          HOST=$(find build -name host_test -type f -perm -u+x | head -1)
+          "$HOST" "build/SpectralDelay_artefacts/Release/VST3/Spectral Delay.vst3"
+
+      - name: Audio Unit validation (auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/SpectralDelay_artefacts/Release/AU/Spectral Delay.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          sleep 2
+          auval -v aufx Spd1 Splb | tee auval.log
+          grep -q "AU VALIDATION SUCCEEDED" auval.log
+
+      - name: Package
+        run: |
+          mkdir -p dist/SpectralDelay
+          cd build/SpectralDelay_artefacts/Release
+          ditto "VST3/Spectral Delay.vst3" "$GITHUB_WORKSPACE/dist/SpectralDelay/Spectral Delay.vst3"
+          ditto "AU/Spectral Delay.component" "$GITHUB_WORKSPACE/dist/SpectralDelay/Spectral Delay.component"
+          cp "$GITHUB_WORKSPACE/INSTALL.txt" "$GITHUB_WORKSPACE/dist/SpectralDelay/"
+          cd "$GITHUB_WORKSPACE/dist"
+          ditto -c -k --keepParent SpectralDelay SpectralDelay-mac.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SpectralDelay-mac
+          path: dist/SpectralDelay-mac.zip

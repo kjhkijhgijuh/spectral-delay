@@ -1,0 +1,24 @@
+Spectral Delay  インストール方法 (Mac)
+=====================================
+
+1. 中身を次のフォルダにコピーします(Finder で「移動」→「フォルダへ移動」に貼り付け)。
+
+   Spectral Delay.vst3       →  ~/Library/Audio/Plug-Ins/VST3/
+   Spectral Delay.component  →  ~/Library/Audio/Plug-Ins/Components/
+
+2. Mac の警告を外します(ネットから落としたプラグインは最初ブロックされます)。
+   「ターミナル」を開いて、次の1行を貼り付けて Enter:
+
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Spectral Delay.vst3" ~/Library/Audio/Plug-Ins/Components/"Spectral Delay.component"
+
+3. Live を開いて、設定 → Plug-Ins → 「再スキャン」。
+   ブラウザの Plug-Ins に「Spectral Lab」→「Spectral Delay」が出てきます。
+
+使い方
+------
+・4本のカーブ(DELAY TIME / FEEDBACK / LEVEL / PAN)はマウスで描けます。
+  横軸は 左 = 低音 → 右 = 高音。点線の横線 = 0(何もしない位置)。ダブルクリックでリセット。
+・右のバーは左右にドラッグ。ダブルクリックで初期値に戻ります。
+・SHIFT:やまびこが返るたびに周波数をずらします。FEEDBACK と合わせるとスパイラルに。
+・FREEZE:いまの音をループし続けます。
+・レイテンシは 2048 サンプル(Live が自動で補正します)。
